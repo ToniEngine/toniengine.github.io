@@ -232,7 +232,7 @@
         .profile-image {
             width: 100%;
             max-width: 400px;
-            border-radius: 10px;
+            border-radius: 3px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
 
@@ -286,14 +286,18 @@
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
+            border-radius: 15px;
         }
 
         .project-tag {
-            background: var(--bg-light);
+            background-color: #2563eb;
             padding: 0.3rem 0.8rem;
             border-radius: 15px;
             font-size: 0.85rem;
-            color: var(--text-dark);
+            color:white
+            /* color: navy; */
+            /* color: var(--text-dark); */
+        
         }
 
         /* Blog Section */
