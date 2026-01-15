@@ -40,7 +40,7 @@ if (resumeBtn) {
         document.body.removeChild(link);
         
         // Optional: Show a notification
-        showNotification('Resume download started! 📄');
+        showNotification('Resume Downloaded Successfully 📄✔');
     });
 }
 
