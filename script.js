@@ -216,6 +216,21 @@ if (newsletterForm) {
     });
 }
 
+/**
+ * Handles the redirection logic between Medium and the Personal Blog.
+ * @param {string} blogUrl - The URL of the article on your website.
+ * @param {string} mediumUrl - The URL of the article on Medium.
+ */
+function choosePlatform(blogUrl, mediumUrl) {
+    const choice = confirm("How would you like to read this?\n\nClick 'OK' for Medium (Paid Members)\nClick 'Cancel' for our Website (Free)");
+    
+    if (choice) {
+        window.open(mediumUrl, '_blank');
+    } else {
+        window.open(blogUrl, '_blank');
+    }
+}
+
 // Initialize comments on blog page
 if (document.getElementById('commentsList')) {
     loadComments();
