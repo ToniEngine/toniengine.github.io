@@ -480,6 +480,7 @@ body {
 
 .read-more:hover {
     gap: 0.8rem;
+    color: var(--accent-hover);
 }
 
 /* About Section */
