@@ -10,7 +10,7 @@ if (mobileMenu && navLinksContainer) {
 // Typing effect for hero section
 
         // Array of texts to display
-        const texts = ["A driven and passionate engineer with experience in Reservoir Performance Evaluation, Data Engineering, and Software Development. ", "Petroleum Engineer in View ", "Tech Enthusiast ", "Exploring the world of Technology "];
+        const texts = ["A driven and passionate engineer ", "with experience in Reservoir Performance Evaluation ", "Data Engineering, and Software Development. ", "Petroleum Engineer ", "Tech Enthusiast ", "Exploring the world of Technology "];
         let index = 0; // Index of the current text
         let charIndex = 0; // Index of the current character being typed
         let currentText = ""; // Current text being typed
