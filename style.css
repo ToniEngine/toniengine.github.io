@@ -162,8 +162,9 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image: url(Pictures/bg_images/fotis-fotopoulos-6sAl6aQ4OWI-unsplash.jpg);
+    background-image: url(Pictures/bg_images/pexels-felixmittermeier-956999.jpg);
     /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+    
     padding: 2rem;
     position: relative;
     overflow: hidden;
