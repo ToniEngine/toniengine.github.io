@@ -7,7 +7,53 @@ if (mobileMenu && navLinksContainer) {
         navLinksContainer.classList.toggle('active');
     });
 }
+// Typing effect for hero section
 
+        // Array of texts to display
+        const texts = ["A driven and passionate engineer with experience in Reservoir Performance Evaluation, Data Engineering, and Software Development. ", "Petroleum Engineer in View ", "Tech Enthusiast ", "Exploring the world of Technology "];
+        let index = 0; // Index of the current text
+        let charIndex = 0; // Index of the current character being typed
+        let currentText = ""; // Current text being typed
+        let isDeleting = false; // To handle deleting before typing the next text
+
+        // Function to handle the typing effect
+        function typeText() {
+            const textDisplay = document.getElementById("text-display");
+
+            // If text is not being deleted, type the next character
+            if (!isDeleting && charIndex <= texts[index].length) {
+                currentText = texts[index].slice(0, charIndex);
+                textDisplay.innerHTML = currentText;
+                charIndex++; // Move to the next character
+            }
+            // If deleting, remove one character at a time
+            else if (isDeleting && charIndex > 0) {
+                currentText = texts[index].slice(0, charIndex);
+                textDisplay.innerHTML = currentText;
+                charIndex--; // Remove one character
+            }
+
+            // If text has been completely typed and we're not deleting yet
+            if (charIndex === texts[index].length && !isDeleting) {
+                isDeleting = true; // Start deleting after a pause
+                setTimeout(typeText, 3000); // Pause before deleting
+                return;
+            }
+
+            // If the text has been completely deleted
+            if (charIndex === 0 && isDeleting) {
+                isDeleting = false; // Stop deleting
+                index = (index + 1) % texts.length; // Move to the next text
+            }
+
+            // Call this function again after a delay
+            const speed = isDeleting ? 100 : 150; // Speed up when deleting
+            setTimeout(typeText, speed); // Recursively call the function with a delay
+        }
+
+        // Start typing when the page loads
+        typeText();
+    
 // Navbar scroll effect
 window.addEventListener('scroll', () => {
     const navbar = document.getElementById('navbar');
