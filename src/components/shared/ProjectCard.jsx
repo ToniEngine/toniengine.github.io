@@ -2,6 +2,11 @@ import { assetPath } from "../../utils/assetPath";
 import Reveal from "./Reveal";
 
 export default function ProjectCard({ project }) {
+  // Internal projects are static pages shipped from public/, so they need the
+  // deploy base prefix; external ones already carry a full URL.
+  const href = project.internal ? assetPath(project.link) : project.link;
+  const linkProps = project.internal ? {} : { target: "_blank", rel: "noreferrer" };
+
   return (
     <Reveal className="project-card">
       <article>
@@ -9,7 +14,7 @@ export default function ProjectCard({ project }) {
           <img src={assetPath(project.image)} alt={project.title} loading="lazy" />
         </div>
         <div className="project-content">
-          <a href={project.link} target="_blank" rel="noreferrer">
+          <a href={href} {...linkProps}>
             <h3>{project.title}</h3>
           </a>
           <p>{project.description}</p>
@@ -20,6 +25,11 @@ export default function ProjectCard({ project }) {
               </span>
             ))}
           </div>
+          {project.cta ? (
+            <a href={href} {...linkProps} className="btn btn-primary compact-btn project-cta">
+              {project.cta}
+            </a>
+          ) : null}
         </div>
       </article>
     </Reveal>

@@ -1,5 +1,18 @@
 export const projects = [
   {
+    id: "get323-quiz-rush",
+    title: "GET 323 Quiz Rush",
+    description:
+      "A Kahoot-style live quiz on the 200-question GET 323 bank. Practise solo, or host a peer-to-peer room and race a friend - no server, no accounts.",
+    image: "Pictures/quiz_rush_cover.svg",
+    tags: ["JavaScript", "WebRTC", "PeerJS", "Web Audio", "Game"],
+    category: "Web App",
+    link: "kahoot/index.html",
+    internal: true,
+    cta: "Play now",
+    featured: true
+  },
+  {
     id: "supply-chain-dashboard",
     title: "Supply Chain Dashboard",
     description:

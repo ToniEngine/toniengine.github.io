@@ -5,6 +5,14 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/kahoot",
+      "destination": "/kahoot/index.html"
+    },
+    {
+      "source": "/kahoot/",
+      "destination": "/kahoot/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

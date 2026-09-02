@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GET 323 Quiz Rush</title>
+<meta name="description" content="A Kahoot-style live quiz on the GET 323 question bank: photovoltaic, geothermal, biomass and tidal energy.">
+<meta name="theme-color" content="#2b0a4d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="bg-orbs" aria-hidden="true"><span></span><span></span><span></span></div>
+
+<button id="btn-sound" class="icon-btn" type="button" title="Toggle sound" aria-label="Toggle sound">🔊</button>
+
+<main id="app">
+
+  <!-- ───────────────────────── HOME ───────────────────────── -->
+  <section class="screen" id="screen-home">
+    <div class="stack center">
+      <h1 class="logo">GET&nbsp;323<span>Quiz Rush</span></h1>
+      <p class="tagline">200 questions on photovoltaic, geothermal, biomass &amp; tidal energy.<br>Fastest correct answer wins the most points.</p>
+      <div class="stack narrow">
+        <button class="btn btn-primary btn-lg" data-go="solo-setup">Practice on my own</button>
+        <button class="btn btn-ghost btn-lg" data-go="host-setup">Host a game</button>
+        <button class="btn btn-ghost btn-lg" data-go="join">Join a game</button>
+      </div>
+      <p class="fineprint">Every answer is revealed as you go, with the worked solution where the bank has one. Play head-to-head by hosting a room and sharing the code — peer-to-peer, no account, no server.</p>
+    </div>
+  </section>
+
+  <!-- ───────────────────── HOST / SOLO SETUP ───────────────── -->
+  <section class="screen" id="screen-host-setup" hidden>
+    <div class="stack">
+      <header class="screen-head">
+        <button class="btn btn-back" data-go="home" type="button">← Back</button>
+        <h2 id="setup-title">Host a game</h2>
+      </header>
+
+      <div class="card">
+        <h3>Questions</h3>
+        <label class="field">
+          <span>How many questions</span>
+          <select id="opt-count">
+            <option value="10">10 — quick round</option>
+            <option value="20" selected>20 — standard</option>
+            <option value="30">30 — long haul</option>
+            <option value="50">50 — marathon</option>
+            <option value="0">Every question in the pool</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Seconds per question</span>
+          <select id="opt-time">
+            <option value="10">10 — brutal</option>
+            <option value="20" selected>20 — standard</option>
+            <option value="30">30 — relaxed</option>
+            <option value="60">60 — study pace</option>
+            <option value="120">120 — no rush</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Topics</h3>
+          <div class="card-actions">
+            <button class="btn btn-mini" id="btn-topics-all" type="button">All</button>
+            <button class="btn btn-mini" id="btn-topics-none" type="button">None</button>
+          </div>
+        </div>
+        <div id="topic-list" class="topic-list"></div>
+        <p class="pool-note" id="pool-note"></p>
+      </div>
+
+      <button class="btn btn-primary btn-lg" id="btn-create">Create room</button>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── LOBBY ───────────────────────── -->
+  <section class="screen" id="screen-lobby" hidden>
+    <div class="stack center">
+      <p class="eyebrow">Room code</p>
+      <div class="roomcode" id="lobby-code">-----</div>
+      <div class="row">
+        <button class="btn btn-ghost" id="btn-copy-link" type="button">Copy join link</button>
+        <button class="btn btn-ghost" id="btn-copy-code" type="button">Copy code</button>
+      </div>
+      <p class="lobby-status" id="lobby-status">Starting up…</p>
+
+      <div class="players" id="lobby-players"></div>
+
+      <button class="btn btn-primary btn-lg" id="btn-start" disabled>Waiting for players…</button>
+      <button class="btn btn-quiet" data-go="home" type="button">Cancel</button>
+    </div>
+  </section>
+
+  <!-- ────────────────────────── JOIN ───────────────────────── -->
+  <section class="screen" id="screen-join" hidden>
+    <div class="stack center">
+      <header class="screen-head">
+        <button class="btn btn-back" data-go="home" type="button">← Back</button>
+        <h2>Join a game</h2>
+      </header>
+      <form class="stack narrow" id="join-form">
+        <label class="field">
+          <span>Room code</span>
+          <input id="join-code" class="input-code" maxlength="5" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false" placeholder="ABCDE" required>
+        </label>
+        <label class="field">
+          <span>Your nickname</span>
+          <input id="join-name" maxlength="14" autocomplete="off" placeholder="Ada" required>
+        </label>
+        <button class="btn btn-primary btn-lg" type="submit" id="btn-join">Join</button>
+      </form>
+      <p class="lobby-status" id="join-status"></p>
+    </div>
+  </section>
+
+  <!-- ─────────────────── WAITING (guest lobby) ─────────────── -->
+  <section class="screen" id="screen-wait" hidden>
+    <div class="stack center">
+      <div class="spinner"></div>
+      <h2 id="wait-title">You're in!</h2>
+      <p class="tagline" id="wait-text">Hang tight — the host starts the game.</p>
+      <div class="players" id="wait-players"></div>
+      <button class="btn btn-quiet" data-go="home" type="button">Leave</button>
+    </div>
+  </section>
+
+  <!-- ─────────────────────── COUNTDOWN ─────────────────────── -->
+  <section class="screen" id="screen-countdown" hidden>
+    <div class="stack center">
+      <p class="eyebrow" id="count-topic"></p>
+      <div class="countdown" id="count-number">3</div>
+      <p class="tagline" id="count-label">Get ready…</p>
+    </div>
+  </section>
+
+  <!-- ─────────────────────── QUESTION ──────────────────────── -->
+  <section class="screen screen-wide" id="screen-question" hidden>
+    <div class="q-head">
+      <span class="pill" id="q-progress">Q1/20</span>
+      <span class="pill pill-quiet" id="q-topic">Topic</span>
+    </div>
+    <h2 class="q-text" id="q-text">Question</h2>
+    <div class="q-meter">
+      <div class="timer"><div class="timer-fill" id="timer-fill"></div></div>
+      <div class="timer-num" id="timer-num">20</div>
+    </div>
+    <div class="answers" id="answers">
+      <button class="answer a0" data-choice="0" type="button"><span class="shape">▲</span><span class="atext"></span></button>
+      <button class="answer a1" data-choice="1" type="button"><span class="shape">◆</span><span class="atext"></span></button>
+      <button class="answer a2" data-choice="2" type="button"><span class="shape">●</span><span class="atext"></span></button>
+      <button class="answer a3" data-choice="3" type="button"><span class="shape">■</span><span class="atext"></span></button>
+    </div>
+    <p class="q-foot" id="q-foot"></p>
+  </section>
+
+  <!-- ──────────────────────── REVEAL ───────────────────────── -->
+  <section class="screen screen-wide" id="screen-reveal" hidden>
+    <div class="stack center">
+      <div class="verdict" id="verdict">Correct!</div>
+      <p class="verdict-points" id="verdict-points"></p>
+      <div class="correct-box">
+        <p class="eyebrow">Correct answer</p>
+        <p class="correct-text" id="correct-text"></p>
+        <p class="note" id="reveal-note" hidden></p>
+      </div>
+      <div class="tally" id="tally"></div>
+      <p class="lobby-status" id="reveal-wait"></p>
+      <button class="btn btn-primary" id="btn-next" hidden>Next question</button>
+    </div>
+  </section>
+
+  <!-- ────────────────────── SCOREBOARD ─────────────────────── -->
+  <section class="screen" id="screen-scoreboard" hidden>
+    <div class="stack center">
+      <h2 class="section-title">Scoreboard</h2>
+      <ol class="scoreboard" id="scoreboard"></ol>
+      <p class="lobby-status" id="score-wait"></p>
+      <button class="btn btn-primary" id="btn-continue" hidden>Continue</button>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── PODIUM ───────────────────────── -->
+  <section class="screen" id="screen-podium" hidden>
+    <div class="stack center">
+      <h2 class="section-title" id="podium-title">Final scores</h2>
+      <ol class="scoreboard scoreboard-final" id="podium"></ol>
+      <p class="tagline" id="podium-summary"></p>
+      <div class="row">
+        <button class="btn btn-ghost" id="btn-review" type="button">Review my answers</button>
+        <button class="btn btn-primary" id="btn-again" type="button">Play again</button>
+      </div>
+      <button class="btn btn-quiet" data-go="home" type="button">Back to menu</button>
+    </div>
+  </section>
+
+  <!-- ──────────────────────── REVIEW ───────────────────────── -->
+  <section class="screen screen-wide" id="screen-review" hidden>
+    <div class="stack">
+      <header class="screen-head">
+        <button class="btn btn-back" id="btn-review-back" type="button">← Back</button>
+        <h2>Answer review</h2>
+      </header>
+      <div id="review-list" class="review-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- PeerJS provides the WebRTC signalling + data channels for room play. -->
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="js/questions.js"></script>
+<script src="js/sfx.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/net.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
