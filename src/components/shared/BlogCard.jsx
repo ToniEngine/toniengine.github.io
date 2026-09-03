@@ -21,7 +21,7 @@ export default function BlogCard({ article }) {
           <h3>{article.title}</h3>
           <p>{article.excerpt}</p>
           <a href={article.link} className="read-more" target="_blank" rel="noreferrer">
-            Read More <span aria-hidden="true">?</span>
+            Read More <span aria-hidden="true">→</span>
           </a>
         </div>
       </article>

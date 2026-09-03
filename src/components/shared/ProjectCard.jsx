@@ -1,11 +1,24 @@
+import { Link } from "react-router-dom";
 import { assetPath } from "../../utils/assetPath";
 import Reveal from "./Reveal";
 
 export default function ProjectCard({ project }) {
-  // Internal projects are static pages shipped from public/, so they need the
-  // deploy base prefix; external ones already carry a full URL.
+  // Three kinds of destination: an in-app route, a static page shipped from
+  // public/ (needs the deploy base prefix), or an external URL.
+  const isRoute = Boolean(project.route);
   const href = project.internal ? assetPath(project.link) : project.link;
-  const linkProps = project.internal ? {} : { target: "_blank", rel: "noreferrer" };
+  const linkProps = project.internal || isRoute ? {} : { target: "_blank", rel: "noreferrer" };
+
+  const Anchor = ({ className, children }) =>
+    isRoute ? (
+      <Link to={project.route} className={className}>
+        {children}
+      </Link>
+    ) : (
+      <a href={href} className={className} {...linkProps}>
+        {children}
+      </a>
+    );
 
   return (
     <Reveal className="project-card">
@@ -14,9 +27,9 @@ export default function ProjectCard({ project }) {
           <img src={assetPath(project.image)} alt={project.title} loading="lazy" />
         </div>
         <div className="project-content">
-          <a href={href} {...linkProps}>
+          <Anchor>
             <h3>{project.title}</h3>
-          </a>
+          </Anchor>
           <p>{project.description}</p>
           <div className="project-tags">
             {project.tags.map((tag) => (
@@ -26,9 +39,7 @@ export default function ProjectCard({ project }) {
             ))}
           </div>
           {project.cta ? (
-            <a href={href} {...linkProps} className="btn btn-primary compact-btn project-cta">
-              {project.cta}
-            </a>
+            <Anchor className="btn btn-primary compact-btn project-cta">{project.cta}</Anchor>
           ) : null}
         </div>
       </article>

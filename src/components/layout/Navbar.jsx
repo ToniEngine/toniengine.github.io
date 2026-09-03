@@ -3,12 +3,14 @@ import { NavLink, useLocation } from "react-router-dom";
 import { quickLinks } from "../../data/site";
 import { assetPath } from "../../utils/assetPath";
 import { useToast } from "../../context/ToastContext";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { pathname } = useLocation();
   const showToast = useToast();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     setMenuOpen(false);
@@ -45,7 +47,7 @@ export default function Navbar() {
           Anthony Obot
         </NavLink>
 
-        <ul className={`nav-links ${menuOpen ? "active" : ""}`}>
+        <ul id="primary-navigation" className={`nav-links ${menuOpen ? "active" : ""}`}>
           {quickLinks.map((item) => (
             <li key={item.to}>
               <NavLink
@@ -63,17 +65,30 @@ export default function Navbar() {
           </li>
         </ul>
 
-        <button
-          type="button"
-          className="mobile-menu"
-          aria-label="Toggle navigation"
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((prev) => !prev)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
+        <div className="nav-actions">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+          >
+            <i className={theme === "dark" ? "fa-regular fa-sun" : "fa-regular fa-moon"} aria-hidden="true" />
+          </button>
+
+          <button
+            type="button"
+            className="mobile-menu"
+            aria-label="Toggle navigation"
+            aria-controls="primary-navigation"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
       </div>
     </nav>
   );

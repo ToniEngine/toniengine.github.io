@@ -8,8 +8,10 @@ import { heroTexts } from "../data/site";
 import { useTypingEffect } from "../hooks/useTypingEffect";
 import { sortByPublishedDate } from "../utils/date";
 import { assetPath } from "../utils/assetPath";
+import { useDarkHero } from "../hooks/useDarkHero";
 
 export default function HomePage() {
+  useDarkHero();
   const typingText = useTypingEffect(heroTexts, 110, 60, 1800);
 
   const featuredProjects = projects.filter((project) => project.featured).slice(0, 4);
@@ -24,7 +26,8 @@ export default function HomePage() {
         }}
       >
         <div className="hero-content">
-          <h1>Hi, I'm Anthony</h1>
+          <p className="hero-eyebrow">Available for work &middot; Port Harcourt, NG</p>
+          <h1>Hi, I&rsquo;m Anthony</h1>
           <div className="text-display">{typingText}</div>
           <div className="cta-buttons">
             <Link to="/projects" className="btn btn-primary">
@@ -49,7 +52,7 @@ export default function HomePage() {
         </div>
         <div className="section-cta">
           <Link to="/projects" className="read-more">
-            Explore all projects <span aria-hidden="true">?</span>
+            Explore all projects <span aria-hidden="true">→</span>
           </Link>
         </div>
       </section>
@@ -63,7 +66,7 @@ export default function HomePage() {
         </div>
         <div className="section-cta">
           <Link to="/blog" className="read-more">
-            Read all articles <span aria-hidden="true">?</span>
+            Read all articles <span aria-hidden="true">→</span>
           </Link>
         </div>
       </section>

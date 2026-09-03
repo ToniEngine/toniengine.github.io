@@ -24,7 +24,7 @@
     limitMs: 20000,
     qStartedAt: 0,
     answered: false,
-    settings: { count: 20, time: 20, topics: [] },
+    settings: { count: 20, time: 40, topics: [] },
     endedByHost: false,
     review: [],          // this client's own answer history
     pendingQ: null,      // guest: question currently on screen

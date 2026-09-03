@@ -1,5 +1,17 @@
 export const projects = [
   {
+    id: "grip",
+    title: "GRIP - Gas Reliability & Integration Programme",
+    description:
+      "A team-developed gas monetisation and infrastructure programme integrating modular processing, pipeline integrity, digital coordination and domestic utilisation. 1st place at the NEITC Challenge 2026.",
+    image: "Pictures/grip_cover.svg",
+    tags: ["Energy Systems", "Project Finance", "DCF", "Commercial Strategy", "Infrastructure"],
+    category: "Energy",
+    route: "/projects/grip",
+    cta: "Read the case study",
+    featured: true
+  },
+  {
     id: "get323-quiz-rush",
     title: "GET 323 Quiz Rush",
     description:

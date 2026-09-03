@@ -1,17 +1,49 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Anthony Obot (Data Analyst & Writer)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Anthony Obot - Data Analyst & Technical Writer</title>
     <meta
       name="description"
-      content="Anthony Obot portfolio - data analyst, technical writer, and automation builder."
+      content="Anthony Obot - data analyst, technical writer, and automation builder. Power BI dashboards, Python analysis, and AI workflows."
+    />
+    <meta name="theme-color" content="#0b0c0e" />
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230b0c0e'/><text x='50' y='71' font-size='58' font-family='Inter,Segoe UI,sans-serif' font-weight='700' fill='%234d8dff' text-anchor='middle'>A</text></svg>" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Anthony Obot - Data Analyst & Technical Writer" />
+    <meta
+      property="og:description"
+      content="Power BI dashboards, Python analysis, and AI automation - plus writing for the data community."
+    />
+    <meta property="og:image" content="/profile.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
     />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
+
+    <script>
+      // Resolve the theme before first paint so the page never flashes the wrong one.
+      (function () {
+        try {
+          // Dark-first: dark unless this visitor has explicitly chosen light.
+          var saved = localStorage.getItem("theme");
+          document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
+        } catch (error) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
