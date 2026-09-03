@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "sync:kahoot": "node scripts/sync-kahoot.mjs"
+    "sync:tenergy": "node scripts/sync-tenergy.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

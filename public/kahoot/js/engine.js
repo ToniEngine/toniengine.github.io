@@ -3,7 +3,44 @@
 (function (global) {
   'use strict';
 
-  var BANK = global.QUESTIONS || [];
+  /* Question banks. Each global is optional, so the app still runs if one
+     script is missing; the first registered bank is the default. */
+  var BANKS = [
+    {
+      id: 'get323',
+      name: 'GET 323 Energy',
+      blurb: 'Photovoltaic, geothermal, biomass and tidal energy.',
+      questions: global.QUESTIONS || []
+    },
+    {
+      id: 'seplat',
+      name: 'SEPLAT Aptitude',
+      blurb: 'Numerical, verbal, technical and situational judgment practice.',
+      questions: global.QUESTIONS_SEPLAT || []
+    }
+  ].filter(function (b) { return b.questions.length; });
+
+  var BANK = BANKS.length ? BANKS[0].questions : [];
+  var bankId = BANKS.length ? BANKS[0].id : '';
+
+  function banks() {
+    return BANKS.map(function (b) {
+      return { id: b.id, name: b.name, blurb: b.blurb, count: b.questions.length };
+    });
+  }
+
+  function setBank(id) {
+    for (var i = 0; i < BANKS.length; i++) {
+      if (BANKS[i].id === id) {
+        BANK = BANKS[i].questions;
+        bankId = BANKS[i].id;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function currentBank() { return bankId; }
 
   /* Small seeded PRNG so a deck can be reproduced from its seed. */
   function rng(seed) {
@@ -84,7 +121,11 @@
   }
 
   global.Engine = {
-    bank: BANK,
+    /* A getter, not a snapshot - the bank changes when setBank is called. */
+    get bank() { return BANK; },
+    banks: banks,
+    setBank: setBank,
+    currentBank: currentBank,
     topics: topics,
     pool: pool,
     buildDeck: buildDeck,

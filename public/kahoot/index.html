@@ -21,13 +21,13 @@
   <section class="screen" id="screen-home">
     <div class="stack center">
       <h1 class="logo">GET&nbsp;323<span>Quiz Rush</span></h1>
-      <p class="tagline">200 questions on photovoltaic, geothermal, biomass &amp; tidal energy.<br>Fastest correct answer wins the most points.</p>
+      <p class="tagline">Two question banks, 400 questions: GET&nbsp;323 energy and SEPLAT aptitude practice.<br>Fastest correct answer wins the most points.</p>
       <div class="stack narrow">
         <button class="btn btn-primary btn-lg" data-go="solo-setup">Practice on my own</button>
         <button class="btn btn-ghost btn-lg" data-go="host-setup">Host a game</button>
         <button class="btn btn-ghost btn-lg" data-go="join">Join a game</button>
       </div>
-      <p class="fineprint">Every answer is revealed as you go, with the worked solution where the bank has one. Play head-to-head by hosting a room and sharing the code — peer-to-peer, no account, no server.</p>
+      <p class="fineprint">Every answer is revealed as you go, with a worked explanation. Play head-to-head by hosting a room and sharing the code — peer-to-peer, no account, no server.</p>
     </div>
   </section>
 
@@ -38,6 +38,15 @@
         <button class="btn btn-back" data-go="home" type="button">← Back</button>
         <h2 id="setup-title">Host a game</h2>
       </header>
+
+      <div class="card">
+        <h3>Question bank</h3>
+        <label class="field">
+          <span>Which set of questions</span>
+          <select id="opt-bank"></select>
+        </label>
+        <p class="pool-note" id="bank-note"></p>
+      </div>
 
       <div class="card">
         <h3>Questions</h3>
@@ -217,6 +226,7 @@
 <!-- PeerJS provides the WebRTC signalling + data channels for room play. -->
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="js/questions.js"></script>
+<script src="js/questions-seplat.js"></script>
 <script src="js/sfx.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/net.js"></script>

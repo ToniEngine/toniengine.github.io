@@ -1,0 +1,156 @@
+/* Pure game rules: deck building, option shuffling and scoring.
+   No DOM, no network — so it can be reasoned about (and tested) on its own. */
+(function (global) {
+  'use strict';
+
+  /* Question banks. Each global is optional, so the app still runs if one
+     script is missing; the first registered bank is the default. */
+  var BANKS = [
+    {
+      id: 'seplat',
+      name: 'SEPLAT Technical Trainee',
+      kind: 'Job assessment',
+      blurb: 'Numerical, verbal and abstract reasoning, oil & gas technical knowledge, situational judgment.',
+      icon: 'briefcase',
+      questions: global.QUESTIONS_SEPLAT || []
+    },
+    {
+      id: 'datascience',
+      name: 'Data Science & ML',
+      kind: 'Skills practice',
+      blurb: 'Tree-based models, the scikit-learn workflow and decision regions. Built from course transcripts.',
+      icon: 'chart',
+      questions: global.QUESTIONS_DS || []
+    },
+    {
+      id: 'get323',
+      name: 'GET 323 Energy',
+      kind: 'Course exam',
+      blurb: 'Photovoltaic, geothermal, biomass and tidal energy, across 18 topics.',
+      icon: 'bolt',
+      questions: global.QUESTIONS || []
+    }
+  ].filter(function (b) { return b.questions.length; });
+
+  var BANK = BANKS.length ? BANKS[0].questions : [];
+  var bankId = BANKS.length ? BANKS[0].id : '';
+
+  function banks() {
+    return BANKS.map(function (b) {
+      return {
+        id: b.id, name: b.name, kind: b.kind, blurb: b.blurb,
+        icon: b.icon, count: b.questions.length,
+        topics: b.questions.reduce(function (acc, q) {
+          if (acc.indexOf(q.section) === -1) acc.push(q.section);
+          return acc;
+        }, []).length
+      };
+    });
+  }
+
+  function setBank(id) {
+    for (var i = 0; i < BANKS.length; i++) {
+      if (BANKS[i].id === id) {
+        BANK = BANKS[i].questions;
+        bankId = BANKS[i].id;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function currentBank() { return bankId; }
+
+  /* Small seeded PRNG so a deck can be reproduced from its seed. */
+  function rng(seed) {
+    var s = seed >>> 0;
+    return function () {
+      s = (s + 0x6d2b79f5) >>> 0;
+      var t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function shuffle(arr, rand) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(rand() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  /* Topics in bank order, with question counts. */
+  function topics() {
+    var seen = [], counts = {};
+    BANK.forEach(function (q) {
+      if (counts[q.section] === undefined) { counts[q.section] = 0; seen.push(q.section); }
+      counts[q.section]++;
+    });
+    return seen.map(function (name) { return { name: name, count: counts[name] }; });
+  }
+
+  function pool(selectedTopics) {
+    if (!selectedTopics || !selectedTopics.length) return BANK.slice();
+    var want = {};
+    selectedTopics.forEach(function (t) { want[t] = true; });
+    return BANK.filter(function (q) { return want[q.section]; });
+  }
+
+  /* Build the round's deck.
+     The source bank answers land on "B" 146 times out of 200, so options are
+     shuffled per question and the correct index remapped — otherwise a player
+     could just hammer the second tile all game. */
+  function buildDeck(opts) {
+    opts = opts || {};
+    var seed = opts.seed === undefined ? (Math.random() * 4294967296) >>> 0 : opts.seed;
+    var rand = rng(seed);
+    var picked = shuffle(pool(opts.topics), rand);
+    var count = opts.count > 0 ? Math.min(opts.count, picked.length) : picked.length;
+    picked = picked.slice(0, count);
+
+    return picked.map(function (q) {
+      var order = shuffle([0, 1, 2, 3], rand);
+      return {
+        id: q.id,
+        section: q.section,
+        question: q.question,
+        options: order.map(function (i) { return q.options[i]; }),
+        answer: order.indexOf(q.answer),
+        note: q.note || ''
+      };
+    });
+  }
+
+  /* Kahoot-style scoring: full marks for an instant answer, halved at the
+     buzzer, zero when wrong or unanswered. A run of correct answers adds a
+     streak bonus of +100 each, capped at +500. */
+  var MAX_POINTS = 1000;
+  var STREAK_STEP = 100;
+  var STREAK_CAP = 500;
+
+  function score(correct, elapsedMs, limitMs, streakBefore) {
+    if (!correct) return { points: 0, base: 0, bonus: 0, streak: 0 };
+    var frac = Math.max(0, Math.min(1, elapsedMs / limitMs));
+    var base = Math.round(MAX_POINTS * (1 - frac / 2));
+    var streak = (streakBefore || 0) + 1;
+    var bonus = Math.min(STREAK_CAP, Math.max(0, streak - 1) * STREAK_STEP);
+    return { points: base + bonus, base: base, bonus: bonus, streak: streak };
+  }
+
+  global.Engine = {
+    /* A getter, not a snapshot - the bank changes when setBank is called. */
+    get bank() { return BANK; },
+    banks: banks,
+    setBank: setBank,
+    currentBank: currentBank,
+    topics: topics,
+    pool: pool,
+    buildDeck: buildDeck,
+    score: score,
+    shuffle: shuffle,
+    rng: rng,
+    MAX_POINTS: MAX_POINTS
+  };
+})(window);

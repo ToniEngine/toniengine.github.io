@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" role="img" aria-label="GeoPredict AI - subsurface intelligence">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0c1714"/>
+      <stop offset="100%" stop-color="#070b0d"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,.045)" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <rect width="800" height="450" fill="url(#grid)"/>
+  <circle cx="110" cy="60" r="210" fill="#2fd39a" opacity=".12"/>
+  <circle cx="720" cy="120" r="150" fill="#ff8f45" opacity=".09"/>
+
+  <g>
+    <path d="M0 250 C 130 228, 240 292, 380 268 S 620 224, 800 250 L800 296 L0 296 Z" fill="rgba(47,211,154,.09)" stroke="rgba(47,211,154,.3)"/>
+    <path d="M0 310 C 150 290, 260 344, 400 322 S 640 286, 800 308 L800 356 L0 356 Z" fill="rgba(255,143,69,.08)" stroke="rgba(255,143,69,.26)"/>
+    <path d="M0 372 C 160 352, 280 404, 420 382 S 660 348, 800 370 L800 450 L0 450 Z" fill="rgba(47,211,154,.06)" stroke="rgba(47,211,154,.2)"/>
+  </g>
+
+  <g fill="none" stroke-width="1.6" stroke-linecap="round">
+    <path d="M250 40 q 22 34 -4 68 q -26 34 4 68 q 26 34 -6 68 q -22 34 4 68 q 26 34 -4 68" stroke="rgba(47,211,154,.55)"/>
+    <path d="M520 40 q -18 38 6 72 q 22 34 -8 66 q -26 36 6 70 q 22 32 -6 68 q -20 36 8 68" stroke="rgba(255,143,69,.45)"/>
+  </g>
+  <g>
+    <circle cx="250" cy="176" r="4" fill="#2fd39a"/>
+    <circle cx="520" cy="248" r="4" fill="#ff8f45"/>
+  </g>
+
+  <text x="56" y="150" font-family="Inter, Segoe UI, sans-serif" font-size="60" font-weight="800" letter-spacing="-2.5" fill="#ffffff">GeoPredict<tspan fill="#2fd39a"> AI</tspan></text>
+  <text x="58" y="184" font-family="Inter, Segoe UI, sans-serif" font-size="16" font-weight="600" fill="rgba(255,255,255,.66)">AI-Powered Subsurface Intelligence</text>
+
+  <g transform="translate(58 208)">
+    <rect width="248" height="28" rx="14" fill="rgba(255,143,69,.12)" stroke="rgba(255,143,69,.4)"/>
+    <text x="124" y="19" text-anchor="middle" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="700" fill="#ff8f45">1st Place - NCDMB Innovation 2026</text>
+  </g>
+
+  <text x="58" y="418" font-family="JetBrains Mono, monospace" font-size="11" letter-spacing="2" fill="rgba(255,255,255,.32)">WELL LOGS / ML / LITHOLOGY / RESERVOIR SCREENING</text>
+</svg>

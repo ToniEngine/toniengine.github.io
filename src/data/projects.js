@@ -1,5 +1,17 @@
 export const projects = [
   {
+    id: "geopredict-ai",
+    title: "GeoPredict AI",
+    description:
+      "An AI-powered subsurface intelligence platform that analyses well-log data to accelerate lithology classification and reservoir interval screening. 1st place at the NCDMB Technology Innovation Challenge 2026.",
+    image: "Pictures/geopredict_cover.svg",
+    tags: ["Python", "Scikit-learn", "Machine Learning", "Petroleum Engineering", "Energy Tech"],
+    category: "Energy",
+    route: "/projects/geopredict",
+    cta: "Read the case study",
+    featured: true
+  },
+  {
     id: "grip",
     title: "GRIP - Gas Reliability & Integration Programme",
     description:
@@ -12,16 +24,16 @@ export const projects = [
     featured: true
   },
   {
-    id: "get323-quiz-rush",
-    title: "GET 323 Quiz Rush",
+    id: "tenergy-games",
+    title: "Tenergy Games",
     description:
-      "A Kahoot-style live quiz on the 200-question GET 323 bank. Practise solo, or host a peer-to-peer room and race a friend - no server, no accounts.",
-    image: "Pictures/quiz_rush_cover.svg",
-    tags: ["JavaScript", "WebRTC", "PeerJS", "Web Audio", "Game"],
+      "An exam-practice platform in a game format, built for job assessments. Three question banks, worked explanations on every answer, and peer-to-peer head-to-head rounds with no server or accounts.",
+    image: "Pictures/tenergy_games_cover.svg",
+    tags: ["JavaScript", "WebRTC", "PeerJS", "EdTech", "Game"],
     category: "Web App",
-    link: "kahoot/index.html",
+    link: "tenergy/index.html",
     internal: true,
-    cta: "Play now",
+    cta: "Open the platform",
     featured: true
   },
   {

@@ -36,14 +36,37 @@
     linear-gradient(180deg, rgba(7, 8, 10, 0.78) 0%, rgba(7, 8, 10, 0.94) 100%);
 }
 
+/* Shift the subject clear of the wordmark, and hold a scrim heavy enough
+   that the headline never competes with faces behind it. */
+.case-hero.has-photo {
+  background-position: 72% center;
+}
+
 .case-hero.has-photo::before {
   background: linear-gradient(
       100deg,
-      rgba(7, 8, 10, 0.95) 0%,
-      rgba(7, 8, 10, 0.82) 45%,
-      rgba(7, 8, 10, 0.5) 100%
+      rgba(7, 8, 10, 0.96) 0%,
+      rgba(7, 8, 10, 0.9) 34%,
+      rgba(7, 8, 10, 0.6) 64%,
+      rgba(7, 8, 10, 0.34) 100%
     ),
-    radial-gradient(100% 80% at 10% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%);
+    linear-gradient(
+      180deg,
+      rgba(7, 8, 10, 0.66) 0%,
+      rgba(7, 8, 10, 0.08) 24%,
+      rgba(7, 8, 10, 0.18) 68%,
+      rgba(7, 8, 10, 0.82) 100%
+    ),
+    radial-gradient(100% 80% at 10% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%);
+}
+
+/* The network overlay is decoration; pull it back once a photo carries the hero. */
+.case-hero.has-photo .case-hero-net {
+  opacity: 0.3;
+}
+
+.case-hero.has-photo .case-hero-grid {
+  opacity: 0.5;
 }
 
 /* engineering grid */

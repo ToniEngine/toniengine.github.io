@@ -71,6 +71,46 @@
 
   var topicBoxes = [];
 
+  /* Populate the bank picker. Switching bank swaps the engine's pool, so the
+     topic list has to be rebuilt from scratch each time. */
+  function buildBanks() {
+    var sel = $('opt-bank');
+    var banks = Engine.banks();
+
+    if (banks.length < 2) {
+      // Nothing to choose between - hide the card rather than show one option.
+      var card = sel.closest('.card');
+      if (card) card.hidden = true;
+      return;
+    }
+
+    sel.innerHTML = '';
+    banks.forEach(function (b) {
+      var opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = b.name + ' — ' + b.count + ' questions';
+      sel.appendChild(opt);
+    });
+    sel.value = Engine.currentBank();
+
+    sel.addEventListener('change', function () {
+      Engine.setBank(sel.value);
+      describeBank();
+      buildTopics();
+    });
+
+    describeBank();
+  }
+
+  function describeBank() {
+    var note = $('bank-note');
+    if (!note) return;
+    var current = Engine.currentBank();
+    var match = Engine.banks().filter(function (b) { return b.id === current; })[0];
+    note.textContent = match ? match.blurb : '';
+    note.className = 'pool-note';
+  }
+
   function buildTopics() {
     var host = $('topic-list');
     host.innerHTML = '';
@@ -582,6 +622,7 @@
 
   function readSettings() {
     S.settings = {
+      bank: Engine.currentBank(),
       count: parseInt($('opt-count').value, 10),
       time: parseInt($('opt-time').value, 10),
       topics: selectedTopics()
@@ -860,6 +901,7 @@
         'Question bank failed to load — check that js/questions.js is present.</p>';
       return;
     }
+    buildBanks();
     buildTopics();
     wire();
 

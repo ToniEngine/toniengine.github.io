@@ -5,12 +5,12 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/kahoot",
-      "destination": "/kahoot/index.html"
+      "source": "/tenergy",
+      "destination": "/tenergy/index.html"
     },
     {
-      "source": "/kahoot/",
-      "destination": "/kahoot/index.html"
+      "source": "/tenergy/",
+      "destination": "/tenergy/index.html"
     },
     {
       "source": "/(.*)",
