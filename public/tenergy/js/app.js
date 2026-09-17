@@ -855,6 +855,36 @@
     });
 
     $('opt-count').addEventListener('change', updatePool);
+    /* Connectivity check. Tells you whether this network can sustain a
+       peer-to-peer game before you waste time failing to join one. */
+    $('btn-nettest').addEventListener('click', function () {
+      var btn = $('btn-nettest');
+      var out = $('nettest-result');
+      btn.disabled = true;
+      btn.textContent = 'Checking…';
+      out.hidden = false;
+      out.className = 'fineprint';
+      out.textContent = 'Testing this network — up to 8 seconds…';
+
+      Net.testConnectivity().then(function (r) {
+        btn.disabled = false;
+        btn.textContent = 'Check my connection';
+        if (r.relay) {
+          out.className = 'fineprint ok';
+          out.textContent = 'Looks good. A relay is reachable, so you should be able to play across ' +
+            'networks — including with someone in another country.';
+        } else if (r.ok) {
+          out.className = 'fineprint';
+          out.textContent = 'Partly working. Direct connections are possible, but no relay was reachable, ' +
+            'so a game across different networks may still fail. Try mobile data if joining does not work.';
+        } else {
+          out.className = 'fineprint error';
+          out.textContent = 'This network is blocking peer-to-peer traffic' +
+            (r.error ? ' (' + r.error + ')' : '') + '. Try mobile data or a different Wi-Fi.';
+        }
+      });
+    });
+
     $('btn-topics-all').addEventListener('click', function () {
       topicBoxes.forEach(function (b) { b.checked = true; });
       updatePool();

@@ -6,8 +6,59 @@
 
   // No I/O/0/1 — they get misread when a code is typed off someone's screen.
   var ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  var PREFIX = 'get323quiz-';
+  // Namespaces our room ids on the shared public broker, so a code here can't
+  // collide with some unrelated app's peer of the same name.
+  var PREFIX = 'tenergygames-';
   var CODE_LEN = 5;
+
+  /* ICE servers.
+     STUN alone only works when both ends can be hole-punched. Behind symmetric
+     NAT or CGNAT — the norm on mobile data and on plenty of home ISPs — that
+     fails, and the only way through is a TURN relay that both sides can reach.
+     Without TURN a same-wifi game connects fine while a cross-country one just
+     times out, which is exactly the failure this list exists to prevent.
+
+     The defaults below are a free, rate-limited public relay: fine for a casual
+     game, not something to depend on. To use your own, set window.TENERGY_ICE
+     (see README) — it replaces this list wholesale. */
+  var DEFAULT_ICE = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun.relay.metered.ca:80' },
+    {
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      urls: 'turn:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    {
+      // TCP on 443 looks like ordinary HTTPS, so it survives firewalls that
+      // drop UDP altogether. Slowest path, but the one that usually works.
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
+  ];
+
+  function iceServers() {
+    var custom = global.TENERGY_ICE;
+    if (custom && custom.length) return custom;
+    try {
+      var saved = localStorage.getItem('tenergy-ice');
+      if (saved) {
+        var parsed = JSON.parse(saved);
+        if (parsed && parsed.length) return parsed;
+      }
+    } catch (e) { /* unreadable storage — fall through to the defaults */ }
+    return DEFAULT_ICE;
+  }
+
+  /* What the last connection attempt actually did, for diagnosis. */
+  var lastDiag = { brokerOpen: false, hostFound: false, iceState: null, relayUsed: null };
 
   function makeCode() {
     var out = '';
@@ -32,12 +83,34 @@
     return new Peer(id, {
       debug: 0,
       config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' }
-        ]
+        iceServers: iceServers(),
+        // Gather candidates early so the offer is ready the moment it is needed.
+        iceCandidatePoolSize: 4
       }
     });
+  }
+
+  /* Watch the underlying RTCPeerConnection so a stalled handshake can be
+     reported as what it is, rather than as a bare timeout. */
+  function watchIce(conn, onState) {
+    var attach = function () {
+      var pc = conn.peerConnection;
+      if (!pc) return false;
+      var report = function () {
+        lastDiag.iceState = pc.iceConnectionState;
+        if (onState) onState(pc.iceConnectionState);
+      };
+      pc.addEventListener('iceconnectionstatechange', report);
+      report();
+      return true;
+    };
+
+    // peerConnection is created asynchronously, so poll briefly for it.
+    if (attach()) return;
+    var tries = 0;
+    var t = setInterval(function () {
+      if (attach() || ++tries > 40) clearInterval(t);
+    }, 250);
   }
 
   function wireData(conn, fromId) {
@@ -66,6 +139,7 @@
       });
 
       p.on('connection', function (conn) {
+        watchIce(conn, null);
         conn.on('open', function () {
           conns[conn.peer] = conn;
           wireData(conn, conn.peer);
@@ -119,21 +193,57 @@
     return new Promise(function (resolve, reject) {
       if (code.length !== CODE_LEN) { reject(new Error('That room code should be ' + CODE_LEN + ' characters.')); return; }
 
+      lastDiag = { brokerOpen: false, hostFound: false, iceState: null, relayUsed: null };
+
       var p = newPeer(undefined);
       var settled = false;
+
+      /* Relaying through TURN across continents is slower than a direct hop,
+         and the TCP fallback slower still, so allow a generous window. */
       var timer = setTimeout(function () {
-        if (!settled) {
-          settled = true;
-          try { p.destroy(); } catch (e) {}
-          reject(new Error('No answer from room ' + code + '. Check the code, and that the host still has the tab open.'));
+        if (settled) return;
+        settled = true;
+        try { p.destroy(); } catch (e) {}
+
+        var why;
+        if (!lastDiag.brokerOpen) {
+          why = 'Could not reach the matchmaking server. Check your internet connection and try again.';
+        } else if (!lastDiag.hostFound) {
+          why = 'No answer from room ' + code + '. Check the code, and that the host still has the tab open.';
+        } else if (lastDiag.iceState === 'checking' || lastDiag.iceState === 'new') {
+          why = 'Found room ' + code + ', but could not open a direct line to the host. ' +
+                'This is usually a restrictive network — try mobile data, or a different network, on either side.';
+        } else {
+          why = 'Found room ' + code + ', but the connection failed (' +
+                (lastDiag.iceState || 'unknown state') + '). Try again, or switch networks.';
         }
-      }, 20000);
+        reject(new Error(why));
+      }, 40000);
 
       p.on('open', function () {
         peer = p;
+        lastDiag.brokerOpen = true;
+        fire('status', 'Looking for room ' + code + '…');
+
         var conn = p.connect(PREFIX + code, {
           reliable: true,
           metadata: { name: name }
+        });
+
+        watchIce(conn, function (state) {
+          // ICE only leaves 'new' once the host has answered our offer, so this
+          // is the first point at which we know the room actually exists.
+          if (state && state !== 'new') lastDiag.hostFound = true;
+          if (settled) return;
+          if (state === 'checking') fire('status', 'Negotiating a connection…');
+          else if (state === 'connected' || state === 'completed') fire('status', 'Connected.');
+          else if (state === 'failed') {
+            settled = true;
+            clearTimeout(timer);
+            try { p.destroy(); } catch (e) {}
+            reject(new Error('Found room ' + code + ', but no usable network path to the host. ' +
+              'One of you is on a network that blocks peer-to-peer traffic — try mobile data, or a different Wi-Fi.'));
+          }
         });
 
         conn.on('open', function () {
@@ -204,10 +314,54 @@
     setTimeout(detach(), ms || 300);
   }
 
+  /* Connectivity self-test. Gathers ICE candidates against the configured
+     servers and reports what kinds came back:
+       host  — your own machine, only useful on the same network
+       srflx — STUN worked, so a direct hop may be possible
+       relay — TURN worked, which is what rescues restrictive networks
+     No relay candidate means a cross-network game is likely to fail. */
+  function testConnectivity(ms) {
+    return new Promise(function (resolve) {
+      var found = { host: 0, srflx: 0, relay: 0 };
+      var pc;
+      try {
+        pc = new RTCPeerConnection({ iceServers: iceServers() });
+      } catch (e) {
+        resolve({ ok: false, error: 'WebRTC is unavailable in this browser.', found: found });
+        return;
+      }
+
+      var done = function () {
+        try { pc.close(); } catch (e) {}
+        resolve({
+          ok: found.relay > 0 || found.srflx > 0,
+          relay: found.relay > 0,
+          found: found
+        });
+      };
+
+      pc.onicecandidate = function (e) {
+        if (!e.candidate) return done();
+        var type = (e.candidate.candidate.match(/ typ (\w+)/) || [])[1];
+        if (type && found[type] !== undefined) found[type]++;
+      };
+
+      // A data channel is needed or no candidates are gathered at all.
+      try { pc.createDataChannel('probe'); } catch (e) {}
+      pc.createOffer()
+        .then(function (o) { return pc.setLocalDescription(o); })
+        .catch(function () { done(); });
+
+      setTimeout(done, ms || 8000);
+    });
+  }
+
   global.Net = {
     host: host,
     join: join,
     send: send,
+    testConnectivity: testConnectivity,
+    get diagnostics() { return Object.assign({}, lastDiag); },
     sendTo: sendTo,
     broadcast: broadcast,
     close: close,
