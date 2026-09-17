@@ -21,28 +21,29 @@
      The defaults below are a free, rate-limited public relay: fine for a casual
      game, not something to depend on. To use your own, set window.TENERGY_ICE
      (see README) — it replaces this list wholesale. */
+  /* STUN only. There is deliberately no TURN server here.
+
+     Free public TURN relays do not survive: the widely-cited
+     openrelay.metered.ca endpoints stopped resolving in DNS, and shipping a
+     dead relay is worse than shipping none - every join attempt then waits out
+     the full timeout before failing. So the default is honest about what it is,
+     and the app tells players plainly when no relay is configured.
+
+     Supply your own with Net.setIceServers() or the in-app Connection setup
+     (see README). Without one, players on restrictive networks cannot connect. */
   var DEFAULT_ICE = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun.relay.metered.ca:80' },
-    {
-      urls: 'turn:openrelay.metered.ca:80',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
-    {
-      // TCP on 443 looks like ordinary HTTPS, so it survives firewalls that
-      // drop UDP altogether. Slowest path, but the one that usually works.
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    }
+    { urls: 'stun:stun.cloudflare.com:3478' }
   ];
+
+  function hasRelay(list) {
+    return (list || []).some(function (s) {
+      var u = s && s.urls;
+      var all = Array.isArray(u) ? u.join(' ') : String(u || '');
+      return /^turns?:/.test(all.trim()) || / turns?:/.test(all);
+    });
+  }
 
   function iceServers() {
     var custom = global.TENERGY_ICE;
@@ -163,9 +164,31 @@
         fire('error', err);
       });
 
+      /* The public PeerJS broker drops websockets fairly often. While it is
+         down the room id is no longer registered, so nobody can find the room
+         even though this tab is still open - which is why a dropped broker has
+         to be retried rather than merely announced. */
+      var retries = 0;
       p.on('disconnected', function () {
-        fire('status', 'Signalling server dropped — reconnecting…');
-        try { p.reconnect(); } catch (e) {}
+        if (p.destroyed) return;
+        retries++;
+        if (retries > 8) {
+          fire('status', 'Lost the matchmaking server. Players cannot join until you reopen the room.');
+          fire('brokerDown');
+          return;
+        }
+        fire('status', 'Matchmaking server dropped — reconnecting (' + retries + ')…');
+        // Back off a little so we are not hammering a service that is struggling.
+        setTimeout(function () {
+          try { p.reconnect(); } catch (e) {}
+        }, Math.min(1000 * retries, 5000));
+      });
+
+      p.on('open', function () {
+        if (retries) {
+          retries = 0;
+          fire('status', 'Reconnected. The room is open again.');
+        }
       });
     });
   }
@@ -361,6 +384,16 @@
     join: join,
     send: send,
     testConnectivity: testConnectivity,
+    /* Store TURN credentials on this device. Pass null to clear them. */
+    setIceServers: function (list) {
+      try {
+        if (list && list.length) localStorage.setItem('tenergy-ice', JSON.stringify(list));
+        else localStorage.removeItem('tenergy-ice');
+        return true;
+      } catch (e) { return false; }
+    },
+    getIceServers: iceServers,
+    get hasRelay() { return hasRelay(iceServers()); },
     get diagnostics() { return Object.assign({}, lastDiag); },
     sendTo: sendTo,
     broadcast: broadcast,

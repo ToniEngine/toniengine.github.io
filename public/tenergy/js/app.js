@@ -873,10 +873,15 @@
           out.className = 'fineprint ok';
           out.textContent = 'Looks good. A relay is reachable, so you should be able to play across ' +
             'networks — including with someone in another country.';
+        } else if (r.ok && !Net.hasRelay) {
+          out.className = 'fineprint error';
+          out.textContent = 'No relay server is configured, so this only works when both players are on ' +
+            'friendly networks. Playing from different places will often fail until a TURN server is set up — ' +
+            'see the README.';
         } else if (r.ok) {
           out.className = 'fineprint';
-          out.textContent = 'Partly working. Direct connections are possible, but no relay was reachable, ' +
-            'so a game across different networks may still fail. Try mobile data if joining does not work.';
+          out.textContent = 'Direct connections work, but the configured relay could not be reached. ' +
+            'Check the TURN credentials — a game across different networks will likely fail without it.';
         } else {
           out.className = 'fineprint error';
           out.textContent = 'This network is blocking peer-to-peer traffic' +
