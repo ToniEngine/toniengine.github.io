@@ -869,23 +869,16 @@
       Net.testConnectivity().then(function (r) {
         btn.disabled = false;
         btn.textContent = 'Check my connection';
-        if (r.relay) {
+        if (r.ok) {
           out.className = 'fineprint ok';
-          out.textContent = 'Looks good. A relay is reachable, so you should be able to play across ' +
-            'networks — including with someone in another country.';
-        } else if (r.ok && !Net.hasRelay) {
+          out.textContent = 'Connected to the game server. You can host or join from this network.';
+        } else if (r.configured === false) {
           out.className = 'fineprint error';
-          out.textContent = 'No relay server is configured, so this only works when both players are on ' +
-            'friendly networks. Playing from different places will often fail until a TURN server is set up — ' +
-            'see the README.';
-        } else if (r.ok) {
-          out.className = 'fineprint';
-          out.textContent = 'Direct connections work, but the configured relay could not be reached. ' +
-            'Check the TURN credentials — a game across different networks will likely fail without it.';
+          out.textContent = 'Multiplayer is not set up on this site yet. Solo practice still works.';
         } else {
           out.className = 'fineprint error';
-          out.textContent = 'This network is blocking peer-to-peer traffic' +
-            (r.error ? ' (' + r.error + ')' : '') + '. Try mobile data or a different Wi-Fi.';
+          out.textContent = 'Could not reach the game server' +
+            (r.error ? ' — ' + r.error : '') + '. Check your connection, or try mobile data.';
         }
       });
     });

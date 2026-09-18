@@ -30,7 +30,7 @@
         <button class="btn btn-ghost btn-lg" data-go="host-setup">Host a game</button>
         <button class="btn btn-ghost btn-lg" data-go="join">Join a game</button>
       </div>
-      <p class="fineprint">Every answer is revealed as you go with a worked explanation, so a wrong answer teaches you something. Play head-to-head by hosting a room and sharing the code — peer-to-peer, no account, no server.</p>
+      <p class="fineprint">Every answer is revealed as you go with a worked explanation, so a wrong answer teaches you something. Play head-to-head by hosting a room and sharing the code — no sign-up, and it works wherever your players are.</p>
     </div>
   </section>
 
@@ -229,7 +229,8 @@
 </main>
 
 <!-- PeerJS provides the WebRTC signalling + data channels for room play. -->
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
 <script src="js/questions.js"></script>
 <script src="js/questions-seplat.js"></script>
 <script src="js/questions-datascience.js"></script>
