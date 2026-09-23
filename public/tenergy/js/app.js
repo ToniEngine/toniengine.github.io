@@ -79,6 +79,12 @@
 
     host.innerHTML = '';
     Engine.banks().forEach(function (b) {
+      /* Two real buttons rather than one nested inside the other: selecting the
+         bank and starting a round are separate actions, and both need to be
+         reachable from the keyboard. */
+      var wrap = document.createElement('div');
+      wrap.className = 'exam-wrap';
+
       var card = document.createElement('button');
       card.type = 'button';
       card.className = 'exam';
@@ -95,7 +101,16 @@
         syncBank();
       });
 
-      host.appendChild(card);
+      var quick = document.createElement('button');
+      quick.type = 'button';
+      quick.className = 'quick';
+      quick.textContent = 'Quick play · 10 questions';
+      quick.setAttribute('aria-label', 'Quick play 10 questions from ' + b.name);
+      quick.addEventListener('click', function () { quickPlay(b.id, 10, 20); });
+
+      wrap.appendChild(card);
+      wrap.appendChild(quick);
+      host.appendChild(wrap);
     });
   }
 
@@ -672,6 +687,32 @@
     };
   }
 
+  /* Straight into a solo round on sensible defaults, skipping the setup screen.
+     Used by the Quick play button on each exam card. */
+  function quickPlay(bankId, count, seconds) {
+    Engine.setBank(bankId);
+    syncBank();
+
+    var topics = Engine.topics().map(function (t) { return t.name; });
+    if (!topics.length) return;
+
+    S.settings = {
+      bank: bankId,
+      count: count || 10,
+      time: seconds || 20,
+      topics: topics
+    };
+
+    Sfx.unlock();
+    S.mode = 'solo';
+    S.myId = 'host';
+    S.myName = 'You';
+    S.players = {};
+    S.order = [];
+    addPlayer('host', 'You');
+    startRound();
+  }
+
   function startSolo() {
     readSettings();
     if (!S.settings.topics.length) return;
@@ -722,8 +763,14 @@
       refreshLobby();
     }).catch(function (err) {
       $('lobby-status').className = 'lobby-status error';
-      $('lobby-status').textContent = 'Could not open a room: ' + (err && err.message ? err.message : 'network error') +
-        '. Check your connection and try again.';
+      if (!Net.configured()) {
+        // Not a network fault — the site has no game server configured yet.
+        $('lobby-status').textContent = 'Multiplayer is not set up on this site yet. Go back and use ' +
+          '"Set up multiplayer" on the home screen. Solo practice works without it.';
+      } else {
+        $('lobby-status').textContent = 'Could not open a room: ' +
+          (err && err.message ? err.message : 'network error') + ' Check your connection and try again.';
+      }
     });
   }
 
@@ -855,8 +902,49 @@
     });
 
     $('opt-count').addEventListener('change', updatePool);
-    /* Connectivity check. Tells you whether this network can sustain a
-       peer-to-peer game before you waste time failing to join one. */
+    /* In-app server setup. Saving to this device avoids a redeploy just to try
+       a credential, and the save is verified before it is reported as working. */
+    (function () {
+      var panel = $('setup-multiplayer');
+      if (!panel) return;
+      panel.hidden = Net.configured();
+
+      $('cfg-save').addEventListener('click', function () {
+        var url = $('cfg-url').value.trim().replace(/\/+$/, '');
+        var key = $('cfg-key').value.trim();
+        var out = $('cfg-status');
+
+        if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
+          out.className = 'pool-note warn';
+          out.textContent = 'That does not look like a Supabase project URL. It should be https://xxxxx.supabase.co';
+          return;
+        }
+        if (key.length < 40) {
+          out.className = 'pool-note warn';
+          out.textContent = 'That key looks too short — copy the full anon / public key.';
+          return;
+        }
+
+        Net.setServer(url, key);
+        out.className = 'pool-note';
+        out.textContent = 'Saved. Testing the connection…';
+
+        Net.testConnectivity().then(function (r) {
+          if (r.ok) {
+            out.className = 'pool-note ok';
+            out.textContent = 'Connected. You can host and join games now.';
+            setTimeout(function () { panel.hidden = true; }, 2500);
+          } else {
+            // Keep the values so they can be corrected rather than retyped.
+            out.className = 'pool-note warn';
+            out.textContent = 'Saved, but the server did not answer' +
+              (r.error ? ' — ' + r.error : '') + ' Check the URL and key, then try again.';
+          }
+        });
+      });
+    })();
+
+    /* Connectivity check, for confirming a given network can reach the server. */
     $('btn-nettest').addEventListener('click', function () {
       var btn = $('btn-nettest');
       var out = $('nettest-result');

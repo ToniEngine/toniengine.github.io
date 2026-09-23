@@ -31,6 +31,23 @@
         <button class="btn btn-ghost btn-lg" data-go="join">Join a game</button>
       </div>
       <p class="fineprint">Every answer is revealed as you go with a worked explanation, so a wrong answer teaches you something. Play head-to-head by hosting a room and sharing the code — no sign-up, and it works wherever your players are.</p>
+
+      <!-- Only shown when no game server is configured. -->
+      <div class="card setup-card" id="setup-multiplayer" hidden>
+        <h3>Set up multiplayer</h3>
+        <p class="pool-note">Solo practice works already. To host or join rooms, connect a free
+          Supabase project — Project Settings → API in your Supabase dashboard.</p>
+        <label class="field">
+          <span>Project URL</span>
+          <input id="cfg-url" autocomplete="off" spellcheck="false" placeholder="https://xxxxx.supabase.co">
+        </label>
+        <label class="field">
+          <span>Anon / public key</span>
+          <input id="cfg-key" autocomplete="off" spellcheck="false" placeholder="eyJhbGciOi…">
+        </label>
+        <button class="btn btn-primary" id="cfg-save" type="button">Save &amp; test</button>
+        <p class="pool-note" id="cfg-status"></p>
+      </div>
     </div>
   </section>
 
@@ -234,6 +251,7 @@
 <script src="js/questions.js"></script>
 <script src="js/questions-seplat.js"></script>
 <script src="js/questions-datascience.js"></script>
+<script src="js/questions-venture.js"></script>
 <script src="js/sfx.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/net.js"></script>

@@ -15,6 +15,14 @@
       questions: global.QUESTIONS_SEPLAT || []
     },
     {
+      id: 'venture',
+      name: 'Venture Creation (ENT 321)',
+      kind: 'Course exam',
+      blurb: 'Entrepreneurship across 12 chapters: opportunity, business plans, finance, marketing, leadership, book-keeping, risk and technology.',
+      icon: 'rocket',
+      questions: global.QUESTIONS_VENTURE || []
+    },
+    {
       id: 'datascience',
       name: 'Data Science & ML',
       kind: 'Skills practice',
