@@ -390,12 +390,7 @@ body {
 .fineprint.ok { color: #6ee7a8; }
 .fineprint.error { color: #ff8a8a; }
 
-/* multiplayer setup panel */
-.setup-card { text-align: left; width: 100%; margin-top: 4px; }
-.setup-card h3 { margin-bottom: 6px; }
-.setup-card .field { margin-top: 10px; }
-.setup-card .btn { margin-top: 12px; }
-.pool-note.ok { color: #6ee7a8; }
+
 
 /* one-tap round, straight from the card */
 .quick {

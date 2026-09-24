@@ -32,22 +32,6 @@
       </div>
       <p class="fineprint">Every answer is revealed as you go with a worked explanation, so a wrong answer teaches you something. Play head-to-head by hosting a room and sharing the code — no sign-up, and it works wherever your players are.</p>
 
-      <!-- Only shown when no game server is configured. -->
-      <div class="card setup-card" id="setup-multiplayer" hidden>
-        <h3>Set up multiplayer</h3>
-        <p class="pool-note">Solo practice works already. To host or join rooms, connect a free
-          Supabase project — Project Settings → API in your Supabase dashboard.</p>
-        <label class="field">
-          <span>Project URL</span>
-          <input id="cfg-url" autocomplete="off" spellcheck="false" placeholder="https://xxxxx.supabase.co">
-        </label>
-        <label class="field">
-          <span>Anon / public key</span>
-          <input id="cfg-key" autocomplete="off" spellcheck="false" placeholder="eyJhbGciOi…">
-        </label>
-        <button class="btn btn-primary" id="cfg-save" type="button">Save &amp; test</button>
-        <p class="pool-note" id="cfg-status"></p>
-      </div>
     </div>
   </section>
 
@@ -246,8 +230,7 @@
 </main>
 
 <!-- PeerJS provides the WebRTC signalling + data channels for room play. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="js/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="js/questions.js"></script>
 <script src="js/questions-seplat.js"></script>
 <script src="js/questions-datascience.js"></script>

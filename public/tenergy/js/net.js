@@ -1,21 +1,21 @@
-/* Room networking over Supabase Realtime.
-   Star topology: the host owns the game state and guests only ever talk to it.
+/* Room networking over WebRTC data channels (PeerJS).
+   Star topology: the host owns the game state and every guest holds exactly
+   one connection to it. Guests never talk to each other.
 
-   Every client connects OUTBOUND to Supabase, so there is no NAT traversal and
-   no peer-to-peer handshake. That is the whole point of this transport - the
-   previous WebRTC one needed both a signalling broker and a TURN relay, and
-   free public instances of each proved unreliable, so players on different
-   networks frequently could not connect at all.
-
-   The Net API is unchanged from that version, so the game code above it did
-   not have to move. */
+   No accounts, no backend, no setup - browsers connect directly to each other.
+   That works on the same network and on most home connections. Between
+   networks that block a direct path (often mobile data, or two different
+   countries) a connection may not be possible at all; the join error says so
+   rather than leaving players guessing. */
 (function (global) {
   'use strict';
 
   // No I/O/0/1 — they get misread when a code is typed off someone's screen.
   var ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  // Namespaces our room ids on the shared public broker, so a code here cannot
+  // collide with some unrelated app's peer of the same name.
+  var PREFIX = 'tenergygames-';
   var CODE_LEN = 5;
-  var ROOM = 'tenergy-room-';
 
   function makeCode() {
     var out = '';
@@ -25,14 +25,9 @@
     return out;
   }
 
-  function makeId() {
-    return 'p' + Math.random().toString(36).slice(2, 10);
-  }
-
-  var client = null;    // Supabase client
-  var channel = null;   // the room's realtime channel
-  var myId = null;
-  var guests = {};      // host side: id -> name
+  var peer = null;      // our PeerJS peer
+  var conns = {};       // host side: peerId -> DataConnection
+  var hostConn = null;  // guest side: connection to the host
   var role = null;      // 'host' | 'guest' | null
   var code = null;
   var handlers = {};
@@ -41,81 +36,23 @@
     if (typeof handlers[name] === 'function') handlers[name](a, b);
   }
 
-  /* ── configuration ─────────────────────────────────────── */
-
-  function settings() {
-    try {
-      var saved = localStorage.getItem('tenergy-supabase');
-      if (saved) {
-        var parsed = JSON.parse(saved);
-        if (parsed && parsed.url && parsed.anonKey) return parsed;
-      }
-    } catch (e) { /* unreadable storage — fall through to the bundled config */ }
-    var cfg = global.TENERGY_SUPABASE || {};
-    return { url: cfg.url || '', anonKey: cfg.anonKey || '' };
-  }
-
-  function configured() {
-    var s = settings();
-    return !!(s.url && s.anonKey);
-  }
-
-  var NOT_CONFIGURED =
-    'Multiplayer is not set up yet. Add your Supabase project URL and anon key ' +
-    'to js/config.js, or run Net.setServer(url, key) in the browser console.';
-
-  function getClient() {
-    if (client) return client;
-    if (!configured()) throw new Error(NOT_CONFIGURED);
-    if (!global.supabase || !global.supabase.createClient) {
-      throw new Error('The Supabase library did not load. Check your connection and reload.');
-    }
-    var s = settings();
-    client = global.supabase.createClient(s.url, s.anonKey, {
-      realtime: { params: { eventsPerSecond: 20 } }
-    });
-    return client;
-  }
-
-  /* ── channel plumbing ──────────────────────────────────── */
-
-  /* One event carries every message. `to` addresses it: absent means everyone,
-     'host' means the host, otherwise a specific guest id. Supabase echoes
-     nothing back to the sender, so no self-filtering is needed. */
-  function openChannel(roomCode, presence) {
-    var sb = getClient();
-    var ch = sb.channel(ROOM + roomCode, {
+  function newPeer(id) {
+    return new Peer(id, {
+      debug: 0,
       config: {
-        broadcast: { self: false, ack: false },
-        presence: { key: myId }
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' }
+        ],
+        iceCandidatePoolSize: 4
       }
     });
-
-    ch.on('broadcast', { event: 'msg' }, function (e) {
-      var msg = e && e.payload;
-      if (!msg || typeof msg.type !== 'string') return;
-      var to = msg.to;
-      if (to && to !== myId && !(to === 'host' && role === 'host')) return;
-      fire('message', msg, msg.from || 'host');
-    });
-
-    return ch;
   }
 
-  function post(payload) {
-    if (!channel) return;
-    try {
-      channel.send({ type: 'broadcast', event: 'msg', payload: payload });
-    } catch (e) { /* a dropped message is not worth tearing the room down for */ }
-  }
-
-  function presenceList(ch) {
-    var state = {};
-    try { state = ch.presenceState() || {}; } catch (e) { return []; }
-    return Object.keys(state).map(function (key) {
-      var entries = state[key] || [];
-      var meta = entries[entries.length - 1] || {};
-      return { id: key, role: meta.role, name: meta.name };
+  function wireData(conn, fromId) {
+    conn.on('data', function (msg) {
+      if (msg && typeof msg.type === 'string') fire('message', msg, fromId);
     });
   }
 
@@ -124,81 +61,80 @@
   function host(h, attempt) {
     handlers = h || {};
     role = 'host';
-    myId = makeId();
     attempt = attempt || 0;
 
     return new Promise(function (resolve, reject) {
       var wanted = makeCode();
-      var ch;
-      try { ch = openChannel(wanted, true); } catch (e) { reject(e); return; }
-
+      var p = newPeer(PREFIX + wanted);
       var settled = false;
-      var timer = setTimeout(function () {
-        if (settled) return;
-        settled = true;
-        try { getClient().removeChannel(ch); } catch (e) {}
-        reject(new Error('Could not reach the game server. Check your connection and try again.'));
-      }, 15000);
 
-      ch.on('presence', { event: 'join' }, function (e) {
-        (e.newPresences || []).forEach(function (p) {
-          if (p.role !== 'guest' || guests[p.id]) return;
-          guests[p.id] = p.name || 'Player';
-          fire('peerOpen', p.id, guests[p.id]);
-        });
-      });
-
-      ch.on('presence', { event: 'leave' }, function (e) {
-        (e.leftPresences || []).forEach(function (p) {
-          if (!guests[p.id]) return;
-          delete guests[p.id];
-          fire('peerClose', p.id);
-        });
-      });
-
-      ch.subscribe(function (status) {
-        if (status === 'SUBSCRIBED') {
-          ch.track({ id: myId, role: 'host' }).then(function () {
-            /* Two hosts could pick the same code. Presence settles a moment
-               after tracking, so look then and stand down if someone was
-               already there — the earlier host keeps the code. */
-            setTimeout(function () {
-              if (settled) return;
-              var others = presenceList(ch).filter(function (p) {
-                return p.role === 'host' && p.id !== myId;
-              });
-              if (others.length && attempt < 4) {
-                settled = true;
-                clearTimeout(timer);
-                try { getClient().removeChannel(ch); } catch (e) {}
-                resolve(host(handlers, attempt + 1));
-                return;
-              }
-              settled = true;
-              clearTimeout(timer);
-              channel = ch;
-              code = wanted;
-              resolve(code);
-            }, 700);
-          });
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (settled) { fire('status', 'Connection to the game server was lost — retrying…'); return; }
+      p.on('open', function () {
+        if (!settled) {
           settled = true;
-          clearTimeout(timer);
-          reject(new Error('Could not open a room on the game server. Check your connection.'));
-        } else if (status === 'CLOSED' && settled) {
-          fire('status', 'Connection closed.');
+          peer = p;
+          code = wanted;
+          resolve(code);
+        } else if (retries) {
+          retries = 0;
+          fire('status', 'Reconnected. The room is open again.');
         }
+      });
+
+      p.on('connection', function (conn) {
+        conn.on('open', function () {
+          conns[conn.peer] = conn;
+          wireData(conn, conn.peer);
+          fire('peerOpen', conn.peer, (conn.metadata && conn.metadata.name) || 'Player');
+        });
+        var drop = function () {
+          if (conns[conn.peer]) { delete conns[conn.peer]; fire('peerClose', conn.peer); }
+        };
+        conn.on('close', drop);
+        conn.on('error', drop);
+      });
+
+      p.on('error', function (err) {
+        // Code collision: pick another one and try again.
+        if (!settled && err && err.type === 'unavailable-id' && attempt < 4) {
+          try { p.destroy(); } catch (e) {}
+          resolve(host(handlers, attempt + 1));
+          return;
+        }
+        if (!settled) { settled = true; reject(err); return; }
+        fire('error', err);
+      });
+
+      /* While the broker is down the room id is no longer registered, so
+         nobody can find the room even though this tab is still open - which is
+         why a drop has to be retried rather than merely announced. */
+      var retries = 0;
+      p.on('disconnected', function () {
+        if (p.destroyed) return;
+        retries++;
+        if (retries > 8) {
+          fire('status', 'Lost the matchmaking server. Reopen the room so players can join.');
+          return;
+        }
+        fire('status', 'Matchmaking dropped — reconnecting (' + retries + ')…');
+        // Back off so we are not hammering a service that is struggling.
+        setTimeout(function () {
+          try { p.reconnect(); } catch (e) {}
+        }, Math.min(1000 * retries, 5000));
       });
     });
   }
 
   function broadcast(type, payload) {
-    post(Object.assign({ type: type, from: myId }, payload || {}));
+    var msg = Object.assign({ type: type }, payload || {});
+    Object.keys(conns).forEach(function (id) {
+      try { conns[id].send(msg); } catch (e) {}
+    });
   }
 
   function sendTo(id, type, payload) {
-    post(Object.assign({ type: type, from: myId, to: id }, payload || {}));
+    var conn = conns[id];
+    if (!conn) return;
+    try { conn.send(Object.assign({ type: type }, payload || {})); } catch (e) {}
   }
 
   /* ── guest ─────────────────────────────────────────────── */
@@ -206,7 +142,6 @@
   function join(roomCode, name, h) {
     handlers = h || {};
     role = 'guest';
-    myId = makeId();
     code = String(roomCode || '').trim().toUpperCase();
 
     return new Promise(function (resolve, reject) {
@@ -215,91 +150,129 @@
         return;
       }
 
-      var ch;
-      try { ch = openChannel(code, true); } catch (e) { reject(e); return; }
-
+      var p = newPeer(undefined);
       var settled = false;
-      var hostSeen = false;
+      var reachedHost = false;
 
       var timer = setTimeout(function () {
         if (settled) return;
         settled = true;
-        try { getClient().removeChannel(ch); } catch (e) {}
-        reject(new Error('No room called ' + code + '. Check the code, and that the host still has the tab open.'));
-      }, 15000);
+        try { p.destroy(); } catch (e) {}
+        reject(new Error(reachedHost
+          ? 'Found room ' + code + ', but could not open a direct line to the host. ' +
+            'One of you is on a network that blocks this — try the same Wi-Fi, or mobile data.'
+          : 'No answer from room ' + code + '. Check the code, and that the host still has the tab open.'));
+      }, 25000);
 
-      var lookForHost = function () {
-        if (settled || hostSeen) return;
-        var found = presenceList(ch).some(function (p) { return p.role === 'host'; });
-        if (!found) return;
-        hostSeen = true;
-        settled = true;
-        clearTimeout(timer);
-        channel = ch;
-        resolve(ch);
-      };
+      p.on('open', function () {
+        peer = p;
+        var conn = p.connect(PREFIX + code, {
+          reliable: true,
+          metadata: { name: name }
+        });
 
-      ch.on('presence', { event: 'sync' }, lookForHost);
-      ch.on('presence', { event: 'join' }, lookForHost);
+        /* Watch the handshake so a stalled connection can be reported as what
+           it is, rather than as a bare timeout. */
+        var watch = setInterval(function () {
+          var pc = conn.peerConnection;
+          if (!pc) return;
+          clearInterval(watch);
+          if (pc.iceConnectionState && pc.iceConnectionState !== 'new') reachedHost = true;
+          pc.addEventListener('iceconnectionstatechange', function () {
+            var state = pc.iceConnectionState;
+            if (state !== 'new') reachedHost = true;
+            if (settled) return;
+            if (state === 'checking') fire('status', 'Connecting…');
+            else if (state === 'failed') {
+              settled = true;
+              clearTimeout(timer);
+              try { p.destroy(); } catch (e) {}
+              reject(new Error('Found room ' + code + ', but no usable connection to the host. ' +
+                'Try the same Wi-Fi, or mobile data on one side.'));
+            }
+          });
+        }, 250);
+        setTimeout(function () { clearInterval(watch); }, 12000);
 
-      ch.on('presence', { event: 'leave' }, function (e) {
-        var hostLeft = (e.leftPresences || []).some(function (p) { return p.role === 'host'; });
-        if (hostLeft && hostSeen) fire('hostClose');
-      });
-
-      ch.subscribe(function (status) {
-        if (status === 'SUBSCRIBED') {
-          ch.track({ id: myId, role: 'guest', name: name }).then(lookForHost);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          if (settled) { fire('error', new Error('Connection lost.')); return; }
+        conn.on('open', function () {
+          if (settled) return;
           settled = true;
           clearTimeout(timer);
-          reject(new Error('Could not reach the game server. Check your connection and try again.'));
+          clearInterval(watch);
+          hostConn = conn;
+          wireData(conn, 'host');
+          resolve(conn);
+        });
+
+        conn.on('close', function () {
+          hostConn = null;
+          fire('hostClose');
+        });
+
+        conn.on('error', function (err) {
+          if (!settled) { settled = true; clearTimeout(timer); reject(err); }
+        });
+      });
+
+      p.on('error', function (err) {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          var msg = (err && err.type === 'peer-unavailable')
+            ? 'No room called ' + code + '. Double-check the code with the host.'
+            : (err && err.message) || 'Could not reach the room.';
+          reject(new Error(msg));
+          return;
         }
+        fire('error', err);
       });
     });
   }
 
   function send(type, payload) {
-    post(Object.assign({ type: type, from: myId, to: 'host' }, payload || {}));
+    if (!hostConn) return;
+    try { hostConn.send(Object.assign({ type: type }, payload || {})); } catch (e) {}
   }
 
   /* ── diagnostics ───────────────────────────────────────── */
 
-  /* Confirms the game server is reachable from this network, which is the only
-     thing multiplayer now depends on. */
+  /* Gathers ICE candidates to see whether this network can sustain a direct
+     connection at all. A srflx candidate means a peer-to-peer link has a
+     chance; none means this network will very likely block it. */
   function testConnectivity(ms) {
     return new Promise(function (resolve) {
-      if (!configured()) {
-        resolve({ ok: false, configured: false, error: NOT_CONFIGURED });
-        return;
-      }
-
-      var sb, probe;
+      var found = { host: 0, srflx: 0, relay: 0 };
+      var pc;
       try {
-        sb = getClient();
-        probe = sb.channel('tenergy-probe-' + makeId());
+        pc = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        });
       } catch (e) {
-        resolve({ ok: false, configured: true, error: e.message });
+        resolve({ ok: false, error: 'WebRTC is unavailable in this browser.', found: found });
         return;
       }
 
       var done = false;
-      var finish = function (ok, error) {
+      var finish = function () {
         if (done) return;
         done = true;
-        try { sb.removeChannel(probe); } catch (e) {}
-        resolve({ ok: ok, configured: true, error: error });
+        try { pc.close(); } catch (e) {}
+        resolve({ ok: found.srflx > 0, found: found });
       };
 
-      probe.subscribe(function (status) {
-        if (status === 'SUBSCRIBED') finish(true);
-        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          finish(false, 'The game server refused the connection.');
-        }
-      });
+      pc.onicecandidate = function (e) {
+        if (!e.candidate) return finish();
+        var type = (e.candidate.candidate.match(/ typ (\w+)/) || [])[1];
+        if (type && found[type] !== undefined) found[type]++;
+      };
 
-      setTimeout(function () { finish(false, 'The game server did not respond.'); }, ms || 10000);
+      // A data channel is needed or no candidates are gathered at all.
+      try { pc.createDataChannel('probe'); } catch (e) {}
+      pc.createOffer()
+        .then(function (o) { return pc.setLocalDescription(o); })
+        .catch(finish);
+
+      setTimeout(finish, ms || 8000);
     });
   }
 
@@ -311,18 +284,20 @@
 
   /* Drop every reference now, but hand back a teardown to run later — a
      goodbye sent in this tick still needs a moment on the wire before the
-     channel goes away. */
+     data channel goes away. */
   function detach() {
-    var oldChannel = channel;
-    channel = null;
-    guests = {};
+    var oldPeer = peer, oldConns = conns;
+    conns = {};
+    hostConn = null;
+    peer = null;
     role = null;
     code = null;
-    myId = null;
     handlers = {};
     return function () {
-      if (!oldChannel) return;
-      try { getClient().removeChannel(oldChannel); } catch (e) {}
+      Object.keys(oldConns).forEach(function (id) {
+        try { oldConns[id].close(); } catch (e) {}
+      });
+      if (oldPeer) { try { oldPeer.destroy(); } catch (e) {} }
     };
   }
 
@@ -339,21 +314,8 @@
     close: close,
     closeSoon: closeSoon,
     testConnectivity: testConnectivity,
-    configured: configured,
-    /* Point this device at a Supabase project without editing any files. */
-    setServer: function (url, anonKey) {
-      try {
-        if (url && anonKey) {
-          localStorage.setItem('tenergy-supabase', JSON.stringify({ url: url, anonKey: anonKey }));
-        } else {
-          localStorage.removeItem('tenergy-supabase');
-        }
-        client = null;
-        return true;
-      } catch (e) { return false; }
-    },
     get role() { return role; },
     get code() { return code; },
-    get peerCount() { return Object.keys(guests).length; }
+    get peerCount() { return Object.keys(conns).length; }
   };
 })(window);

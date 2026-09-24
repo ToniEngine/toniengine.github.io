@@ -763,14 +763,8 @@
       refreshLobby();
     }).catch(function (err) {
       $('lobby-status').className = 'lobby-status error';
-      if (!Net.configured()) {
-        // Not a network fault — the site has no game server configured yet.
-        $('lobby-status').textContent = 'Multiplayer is not set up on this site yet. Go back and use ' +
-          '"Set up multiplayer" on the home screen. Solo practice works without it.';
-      } else {
-        $('lobby-status').textContent = 'Could not open a room: ' +
-          (err && err.message ? err.message : 'network error') + ' Check your connection and try again.';
-      }
+      $('lobby-status').textContent = 'Could not open a room: ' +
+        (err && err.message ? err.message : 'network error');
     });
   }
 
@@ -902,48 +896,6 @@
     });
 
     $('opt-count').addEventListener('change', updatePool);
-    /* In-app server setup. Saving to this device avoids a redeploy just to try
-       a credential, and the save is verified before it is reported as working. */
-    (function () {
-      var panel = $('setup-multiplayer');
-      if (!panel) return;
-      panel.hidden = Net.configured();
-
-      $('cfg-save').addEventListener('click', function () {
-        var url = $('cfg-url').value.trim().replace(/\/+$/, '');
-        var key = $('cfg-key').value.trim();
-        var out = $('cfg-status');
-
-        if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
-          out.className = 'pool-note warn';
-          out.textContent = 'That does not look like a Supabase project URL. It should be https://xxxxx.supabase.co';
-          return;
-        }
-        if (key.length < 40) {
-          out.className = 'pool-note warn';
-          out.textContent = 'That key looks too short — copy the full anon / public key.';
-          return;
-        }
-
-        Net.setServer(url, key);
-        out.className = 'pool-note';
-        out.textContent = 'Saved. Testing the connection…';
-
-        Net.testConnectivity().then(function (r) {
-          if (r.ok) {
-            out.className = 'pool-note ok';
-            out.textContent = 'Connected. You can host and join games now.';
-            setTimeout(function () { panel.hidden = true; }, 2500);
-          } else {
-            // Keep the values so they can be corrected rather than retyped.
-            out.className = 'pool-note warn';
-            out.textContent = 'Saved, but the server did not answer' +
-              (r.error ? ' — ' + r.error : '') + ' Check the URL and key, then try again.';
-          }
-        });
-      });
-    })();
-
     /* Connectivity check, for confirming a given network can reach the server. */
     $('btn-nettest').addEventListener('click', function () {
       var btn = $('btn-nettest');
@@ -959,14 +911,11 @@
         btn.textContent = 'Check my connection';
         if (r.ok) {
           out.className = 'fineprint ok';
-          out.textContent = 'Connected to the game server. You can host or join from this network.';
-        } else if (r.configured === false) {
-          out.className = 'fineprint error';
-          out.textContent = 'Multiplayer is not set up on this site yet. Solo practice still works.';
+          out.textContent = 'This network looks fine for hosting and joining games.';
         } else {
           out.className = 'fineprint error';
-          out.textContent = 'Could not reach the game server' +
-            (r.error ? ' — ' + r.error : '') + '. Check your connection, or try mobile data.';
+          out.textContent = 'This network looks like it blocks direct connections' +
+            (r.error ? ' (' + r.error + ')' : '') + '. Try the same Wi-Fi as the other player, or mobile data.';
         }
       });
     });
